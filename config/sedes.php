@@ -13,7 +13,7 @@ $supervisores = DB::fetchAll(
 );
 require_once ROOT_PATH . '/views/layout/header.php';
 ?>
-<script>const SUPERVISORES = <?= json_encode($supervisores) ?>;</script>
+<script>var SUPERVISORES = <?= json_encode($supervisores) ?>;</script>
 
 <div class="tc-card">
   <div class="tc-card-header">

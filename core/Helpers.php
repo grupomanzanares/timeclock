@@ -21,9 +21,11 @@ class Helpers
     /** Verifica si el equipo del cliente está autorizado */
     public static function equipoAutorizado(int $cargoId, int $sedeId): bool
     {
-        $hostname = self::getClientHostname();
+        $hostname  = self::getClientHostname();
+        // Nombre corto: "pc001.oficina.local" → "pc001"
+        $shortName = strtolower(explode('.', $hostname)[0]);
 
-        // Buscar restricciones para el cargo
+        // Buscar restricciones para el cargo (sede específica o todas las sedes)
         $rows = DB::fetchAll(
             'SELECT nombre_equipo FROM equipos_autorizados
              WHERE cargo_id = ? AND activo = 1 AND (sede_id IS NULL OR sede_id = ?)',
@@ -34,9 +36,19 @@ class Helpers
         if (empty($rows)) return true;
 
         foreach ($rows as $row) {
-            if (strtolower($row['nombre_equipo']) === $hostname) return true;
+            $cfg = strtolower(trim($row['nombre_equipo']));
+            // Comparación exacta, por nombre corto o por IP directa
+            if ($cfg === $hostname || $cfg === $shortName) return true;
+            // Configurado como "pc001" y detectado "pc001.dominio.local"
+            if (str_starts_with($hostname, $cfg . '.')) return true;
         }
         return false;
+    }
+
+    /** Devuelve el hostname detectado del cliente (útil para diagnóstico) */
+    public static function getClientHostnameDetectado(): string
+    {
+        return self::getClientHostname();
     }
 
     /** Diferencia en minutos entre dos objetos DateTime */
@@ -55,6 +67,11 @@ class Helpers
     /** Devuelve TRUE si la fecha es festivo en Colombia */
     public static function esFestivo(string $fecha): bool
     {
+        // Primero: festivos oficiales calculados algorítmicamente (sin BD)
+        if (FestivosCol::esFestivo($fecha)) {
+            return true;
+        }
+        // Segundo: fechas especiales adicionales guardadas por el admin en BD
         $row = DB::fetchOne('SELECT id FROM festivos WHERE fecha = ?', [$fecha]);
         return $row !== null;
     }

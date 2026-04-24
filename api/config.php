@@ -128,11 +128,32 @@ switch ($action) {
     // ---- Festivos ----
     case 'festivos_listar':
         $anio = (int)($_GET['anio'] ?? date('Y'));
-        $rows = DB::fetchAll(
+
+        // Festivos calculados automáticamente
+        $calculados = FestivosCol::generarAnio($anio);
+        $fechasCalc = array_column($calculados, 'fecha');
+
+        // Festivos especiales guardados en BD que no están en el cálculo automático
+        $enBD = DB::fetchAll(
             'SELECT * FROM festivos WHERE YEAR(fecha) = ? ORDER BY fecha',
             [$anio]
         );
-        Response::success($rows);
+        $especiales = array_filter($enBD, fn($f) => !in_array($f['fecha'], $fechasCalc));
+
+        // Marcar los calculados como auto=true
+        foreach ($calculados as &$f) {
+            $f['auto'] = true;
+            $f['id']   = null;
+        }
+        unset($f);
+        foreach ($especiales as &$f) {
+            $f['auto'] = false;
+        }
+        unset($f);
+
+        $todos = array_merge($calculados, array_values($especiales));
+        usort($todos, fn($a, $b) => strcmp($a['fecha'], $b['fecha']));
+        Response::success($todos);
         break;
 
     case 'festivos_guardar':
@@ -140,17 +161,20 @@ switch ($action) {
         $body  = json_decode(file_get_contents('php://input'), true) ?? [];
         $fecha = $body['fecha'] ?? '';
         $nom   = Helpers::clean($body['nombre'] ?? '');
-        $tipo  = in_array($body['tipo'] ?? '', ['fijo','trasladable','especial'])
-                    ? $body['tipo'] : 'fijo';
+        $tipo  = 'especial';
 
         if (!$fecha || !$nom) Response::error('Fecha y nombre requeridos');
+
+        if (FestivosCol::esFestivo($fecha)) {
+            Response::error('Esa fecha ya es festivo oficial de Colombia');
+        }
 
         DB::execute(
             'INSERT INTO festivos (fecha, nombre, tipo) VALUES (?, ?, ?)
              ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), tipo=VALUES(tipo)',
             [$fecha, $nom, $tipo]
         );
-        Response::success(null, 'Festivo guardado');
+        Response::success(null, 'Festivo especial guardado');
         break;
 
     case 'festivos_eliminar':

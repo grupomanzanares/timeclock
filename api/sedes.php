@@ -12,11 +12,11 @@ switch ($action) {
 
     case 'listar':
         $rows = DB::fetchAll(
-            'SELECT s.*, u.nombre AS supervisor_nombre
+            "SELECT s.*, CONCAT(u.nombre,' ',u.apellido) AS supervisor_nombre
              FROM sedes s
              LEFT JOIN usuarios u ON u.id = s.supervisor_id
              WHERE s.activo = 1
-             ORDER BY s.nombre ASC'
+             ORDER BY s.nombre ASC"
         );
         Response::success($rows);
         break;

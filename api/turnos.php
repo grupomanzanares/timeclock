@@ -72,21 +72,58 @@ switch ($action) {
 
     // ---- Asignaciones: listar por empleado ----
     case 'asignaciones':
-        $uid  = (int)($_GET['usuario_id'] ?? Auth::id());
-        if ($uid !== Auth::id() && !Auth::hasRole('admin', 'supervisor')) {
-            Response::error('Sin permiso', 403);
-        }
+        $uid = (int)($_GET['usuario_id'] ?? 0);
 
-        $rows = DB::fetchAll(
-            'SELECT at.*, t.nombre AS turno_nombre, t.hora_inicio, t.hora_fin, t.nocturno,
-                    u.nombre AS supervisor_nombre
-             FROM asignacion_turnos at
-             JOIN turnos t ON t.id = at.turno_id
-             LEFT JOIN usuarios u ON u.id = at.supervisor_id
-             WHERE at.usuario_id = ?
-             ORDER BY at.fecha_inicio DESC',
-            [$uid]
-        );
+        if ($uid) {
+            // Empleado específico — solo él mismo o supervisores/admin
+            if ($uid !== Auth::id() && !Auth::hasRole('admin', 'supervisor')) {
+                Response::error('Sin permiso', 403);
+            }
+            $rows = DB::fetchAll(
+                'SELECT at.*,
+                        t.nombre AS turno_nombre, t.hora_inicio, t.hora_fin, t.nocturno,
+                        emp.nombre AS usuario_nombre, emp.apellido AS usuario_apellido,
+                        sup.nombre AS supervisor_nombre
+                 FROM asignacion_turnos at
+                 JOIN turnos t   ON t.id  = at.turno_id
+                 JOIN usuarios emp ON emp.id = at.usuario_id
+                 LEFT JOIN usuarios sup ON sup.id = at.supervisor_id
+                 WHERE at.usuario_id = ?
+                 ORDER BY at.fecha_inicio DESC',
+                [$uid]
+            );
+        } elseif (Auth::hasRole('admin', 'supervisor')) {
+            // Admin/supervisor sin filtro: todos los empleados (supervisor filtra por su sede)
+            $sedeId = Auth::hasRole('supervisor') ? ((int)(Auth::user()['sede_id'] ?? 0) ?: null) : null;
+            $rows = DB::fetchAll(
+                'SELECT at.*,
+                        t.nombre AS turno_nombre, t.hora_inicio, t.hora_fin, t.nocturno,
+                        emp.nombre AS usuario_nombre, emp.apellido AS usuario_apellido,
+                        sup.nombre AS supervisor_nombre
+                 FROM asignacion_turnos at
+                 JOIN turnos t     ON t.id   = at.turno_id
+                 JOIN usuarios emp ON emp.id = at.usuario_id
+                 LEFT JOIN usuarios sup ON sup.id = at.supervisor_id
+                 WHERE (? IS NULL OR emp.sede_id = ?)
+                 ORDER BY at.fecha_inicio DESC',
+                [$sedeId, $sedeId]
+            );
+        } else {
+            // Empleado sin filtro: solo sus propias asignaciones
+            $rows = DB::fetchAll(
+                'SELECT at.*,
+                        t.nombre AS turno_nombre, t.hora_inicio, t.hora_fin, t.nocturno,
+                        emp.nombre AS usuario_nombre, emp.apellido AS usuario_apellido,
+                        sup.nombre AS supervisor_nombre
+                 FROM asignacion_turnos at
+                 JOIN turnos t     ON t.id   = at.turno_id
+                 JOIN usuarios emp ON emp.id = at.usuario_id
+                 LEFT JOIN usuarios sup ON sup.id = at.supervisor_id
+                 WHERE at.usuario_id = ?
+                 ORDER BY at.fecha_inicio DESC',
+                [Auth::id()]
+            );
+        }
         Response::success($rows);
         break;
 

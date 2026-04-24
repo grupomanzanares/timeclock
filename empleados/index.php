@@ -14,8 +14,8 @@ $sedes  = DB::fetchAll('SELECT id, nombre FROM sedes WHERE activo=1 ORDER BY nom
 require_once ROOT_PATH . '/views/layout/header.php';
 ?>
 <script>
-  const CARGOS = <?= json_encode($cargos) ?>;
-  const SEDES  = <?= json_encode($sedes) ?>;
+  var CARGOS = <?= json_encode($cargos) ?>;
+  var SEDES  = <?= json_encode($sedes) ?>;
 </script>
 
 <div class="tc-card">

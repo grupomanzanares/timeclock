@@ -42,7 +42,7 @@ switch ($action) {
         $rol      = in_array($body['rol'] ?? '', ROLES) ? $body['rol'] : 'empleado';
         $cargoId  = (int)($body['cargo_id'] ?? 0) ?: null;
         $sedeId   = (int)($body['sede_id'] ?? 0) ?: null;
-        $equipo   = Helpers::clean($body['equipo_permitido'] ?? '') ?: null;
+        $equipo   = strtolower(Helpers::clean($body['equipo_permitido'] ?? '')) ?: null;
 
         if (!$nombre || !$apellido || !$cedula || !$pass) {
             Response::error('Nombre, apellido, cédula y contraseña son requeridos');
@@ -93,7 +93,7 @@ switch ($action) {
         }
         if (array_key_exists('equipo_permitido', $body)) {
             $fields[] = 'equipo_permitido=?';
-            $params[] = Helpers::clean($body['equipo_permitido']) ?: null;
+            $params[] = strtolower(Helpers::clean($body['equipo_permitido'])) ?: null;
         }
         if (!empty($body['password']) && strlen($body['password']) >= 8) {
             $fields[] = 'password_hash=?';

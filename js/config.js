@@ -37,7 +37,7 @@ const Cfg = (() => {
   }
 
   function abrirParam(p = {}) {
-    const optsCargos = (window.CARGOS_CFG || []).map(c =>
+    const optsCargos = (typeof CARGOS_CFG !== 'undefined' ? CARGOS_CFG : []).map(c =>
       `<option value="${c.id}" ${p.cargo_id == c.id ? 'selected' : ''}>${c.nombre}</option>`
     ).join('');
     TC.openModal(p.id ? 'Editar parámetro' : 'Nuevo parámetro', `
@@ -108,7 +108,7 @@ const Cfg = (() => {
 
   function abrirSede(id) {
     const s = id ? _sedes.find(x => x.id === id) : {};
-    const optsSup = (window.SUPERVISORES || []).map(u =>
+    const optsSup = (typeof SUPERVISORES !== 'undefined' ? SUPERVISORES : []).map(u =>
       `<option value="${u.id}" ${s?.supervisor_id == u.id ? 'selected' : ''}>${u.nombre_completo}</option>`
     ).join('');
     TC.openModal(id ? 'Editar sede' : 'Nueva sede', `
@@ -239,9 +239,9 @@ const Cfg = (() => {
 
   function abrirEquipo(id) {
     const e = id ? _equipos.find(x => x.id === id) : {};
-    const optsCargos = (window.CARGOS_CFG || []).map(c =>
+    const optsCargos = (typeof CARGOS_CFG !== 'undefined' ? CARGOS_CFG : []).map(c =>
       `<option value="${c.id}" ${e?.cargo_id == c.id ? 'selected' : ''}>${c.nombre}</option>`).join('');
-    const optsSedes  = (window.SEDES_CFG || []).map(s =>
+    const optsSedes  = (typeof SEDES_CFG  !== 'undefined' ? SEDES_CFG  : []).map(s =>
       `<option value="${s.id}" ${e?.sede_id == s.id ? 'selected' : ''}>${s.nombre}</option>`).join('');
     TC.openModal(id ? 'Editar equipo' : 'Agregar equipo autorizado', `
       <div class="space-y-3">
@@ -292,46 +292,51 @@ const Cfg = (() => {
     tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center"><span class="tc-spinner"></span></td></tr>';
     const res = await TC.get(`/api/config.php?action=festivos_listar&anio=${anio}`);
     _festivos = res.data || [];
-    if (!_festivos.length) {
-      tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-sm text-gray-400">Sin festivos para ${anio}</td></tr>`;
-      return;
-    }
-    const tipos = { fijo:'bg-red-100 text-red-700', trasladable:'bg-amber-100 text-amber-700', especial:'bg-purple-100 text-purple-700' };
+
+    const tiposBadge = {
+      fijo:         'bg-red-100 text-red-700',
+      trasladable:  'bg-amber-100 text-amber-700',
+      semana_santa: 'bg-orange-100 text-orange-700',
+      especial:     'bg-purple-100 text-purple-700',
+    };
+    const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
     tbody.innerHTML = _festivos.map(f => {
-      const dow = new Date(f.fecha + 'T12:00:00').getDay();
-      const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+      const dow   = new Date(f.fecha + 'T12:00:00').getDay();
+      const badge = tiposBadge[f.tipo] || 'bg-gray-100 text-gray-600';
+      const label = f.tipo === 'semana_santa' ? 'Semana Santa' : f.tipo;
+      const acciones = f.auto
+        ? `<span class="text-xs text-gray-300 italic">Automático</span>`
+        : `<button onclick="Cfg.eliminarFestivo(${f.id})"
+                   class="text-red-500 hover:underline text-xs"
+                   title="Eliminar">
+             <i class="fas fa-trash"></i>
+           </button>`;
       return `
         <tr class="border-b border-gray-50">
           <td class="py-3 pr-4 font-mono text-sm">${TC.fmtFecha(f.fecha)}</td>
-          <td class="py-3 pr-4 text-gray-500">${dias[dow]}</td>
-          <td class="py-3 pr-4 font-medium">${f.nombre}</td>
+          <td class="py-3 pr-4 text-gray-500 text-sm">${dias[dow]}</td>
+          <td class="py-3 pr-4 font-medium text-sm">${f.nombre}</td>
           <td class="py-3 pr-4">
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${tipos[f.tipo]||''}">${f.tipo}</span>
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${badge}">${label}</span>
           </td>
-          <td class="py-3">
-            <button onclick="Cfg.abrirFestivo(${f.id})" class="text-indigo-600 hover:underline text-xs mr-3">
-              <i class="fas fa-pen"></i></button>
-            <button onclick="Cfg.eliminarFestivo(${f.id})" class="text-red-500 hover:underline text-xs">
-              <i class="fas fa-trash"></i></button>
-          </td>
+          <td class="py-3">${acciones}</td>
         </tr>`;
-    }).join('');
+    }).join('') || `<tr><td colspan="5" class="py-6 text-center text-sm text-gray-400">Sin festivos</td></tr>`;
   }
 
-  function abrirFestivo(id) {
-    const f = id ? _festivos.find(x => x.id === id) : {};
-    TC.openModal(id ? 'Editar festivo' : 'Nuevo festivo', `
+  function abrirFestivo() {
+    TC.openModal('Agregar festivo especial', `
       <div class="space-y-3">
+        <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <i class="fas fa-circle-info mr-1"></i>
+          Los festivos oficiales de Colombia se calculan automáticamente.<br>
+          Aquí solo agregue fechas especiales de su empresa.
+        </p>
         <div><label class="tc-label">Fecha</label>
-          <input id="ft-fecha" type="date" class="tc-input" value="${f?.fecha||''}"></div>
-        <div><label class="tc-label">Nombre</label>
-          <input id="ft-nom" class="tc-input" value="${f?.nombre||''}"></div>
-        <div><label class="tc-label">Tipo</label>
-          <select id="ft-tipo" class="tc-input">
-            <option value="fijo" ${f?.tipo==='fijo'?'selected':''}>Fijo</option>
-            <option value="trasladable" ${f?.tipo==='trasladable'?'selected':''}>Trasladable</option>
-            <option value="especial" ${f?.tipo==='especial'?'selected':''}>Especial</option>
-          </select></div>
+          <input id="ft-fecha" type="date" class="tc-input"></div>
+        <div><label class="tc-label">Nombre / Motivo</label>
+          <input id="ft-nom" class="tc-input" placeholder="Ej: Día de la empresa"></div>
       </div>`,
       `<button onclick="TC.closeModal()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg">Cancelar</button>
        <button onclick="Cfg.guardarFestivo()" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Guardar</button>`
@@ -342,8 +347,8 @@ const Cfg = (() => {
     const body = {
       fecha:  document.getElementById('ft-fecha').value,
       nombre: document.getElementById('ft-nom').value,
-      tipo:   document.getElementById('ft-tipo').value,
     };
+    if (!body.fecha || !body.nombre) { TC.toast('Fecha y nombre requeridos', 'warning'); return; }
     const res = await TC.post('/api/config.php?action=festivos_guardar', body);
     TC.closeModal();
     TC.toast(res.message, res.success ? 'success' : 'error');
@@ -351,7 +356,7 @@ const Cfg = (() => {
   }
 
   async function eliminarFestivo(id) {
-    TC.confirmar('¿Eliminar este festivo?', async () => {
+    TC.confirmar('¿Eliminar este festivo especial?', async () => {
       const res = await TC.get(`/api/config.php?action=festivos_eliminar&id=${id}`);
       TC.toast(res.message, res.success ? 'success' : 'error');
       if (res.success) cargarFestivos(document.getElementById('filtro-anio')?.value || new Date().getFullYear());

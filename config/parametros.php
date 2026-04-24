@@ -10,7 +10,7 @@ $extraJs    = ['config.js'];
 $cargos = DB::fetchAll('SELECT id, nombre FROM cargos WHERE activo=1 ORDER BY nombre');
 require_once ROOT_PATH . '/views/layout/header.php';
 ?>
-<script>const CARGOS_CFG = <?= json_encode($cargos) ?>;</script>
+<script>var CARGOS_CFG = <?= json_encode($cargos) ?>;</script>
 
 <div class="space-y-6">
 

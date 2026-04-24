@@ -12,8 +12,8 @@ $sedes  = DB::fetchAll('SELECT id, nombre FROM sedes  WHERE activo=1 ORDER BY no
 require_once ROOT_PATH . '/views/layout/header.php';
 ?>
 <script>
-  const CARGOS_CFG = <?= json_encode($cargos) ?>;
-  const SEDES_CFG  = <?= json_encode($sedes) ?>;
+  var CARGOS_CFG = <?= json_encode($cargos) ?>;
+  var SEDES_CFG  = <?= json_encode($sedes) ?>;
 </script>
 
 <div class="space-y-4">

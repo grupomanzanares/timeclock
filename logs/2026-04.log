@@ -1,5 +1,5 @@
-[2026-04-16 11:56:23] [WARNING] Intento de login fallido: admin@timeclock.com
-[2026-04-16 11:57:22] [INFO] Login exitoso: admin@timeclock.com (ID 1)
-[2026-04-16 12:17:24] [INFO] Login exitoso: prueba@gmanzanares.com (ID 2)
-[2026-04-16 12:19:35] [INFO] Login exitoso: prueba@gmanzanares.com (ID 2)
-[2026-04-24 08:40:32] [INFO] Login exitoso: admin@timeclock.com (ID 1)
+[2026-04-24 10:15:04] [INFO] Login exitoso: empleado2@gmail.com (ID 7)
+[2026-04-24 10:35:06] [INFO] Login exitoso: prueba4@gmanzanares.com (ID 9)
+[2026-04-24 11:25:43] [INFO] Login exitoso: admin@timeclock.com (ID 1)
+[2026-04-24 11:26:23] [INFO] Login exitoso: empleado3@gmail.com (ID 8)
+[2026-04-24 11:27:35] [INFO] Login exitoso: supervisor@pruebas.com (ID 5)

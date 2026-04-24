@@ -73,10 +73,24 @@ switch ($action) {
         $hora     = $ahora->format('H:i:s');
         $fechaHora= $ahora->format('Y-m-d H:i:s');
 
-        // Verificar equipo si el cargo tiene restricción
+        // Verificar equipo si el cargo o el empleado tienen restricción
         if (!Auth::hasRole('admin', 'supervisor')) {
+            $hostDetectado = Helpers::getClientHostname();
+
+            // 1) Restricción individual del empleado (campo equipo_permitido en usuarios)
+            $equipoPersonal = $user['equipo_permitido'] ?? null;
+            if ($equipoPersonal) {
+                $cfg       = strtolower(trim($equipoPersonal));
+                $shortHost = strtolower(explode('.', $hostDetectado)[0]);
+                $permitido = ($cfg === $hostDetectado || $cfg === $shortHost || str_starts_with($hostDetectado, $cfg . '.'));
+                if (!$permitido) {
+                    Response::error("No autorizado desde este equipo. Equipo detectado: \"{$hostDetectado}\"");
+                }
+            }
+
+            // 2) Restricción por cargo (tabla equipos_autorizados)
             if (!Helpers::equipoAutorizado((int)$user['cargo_id'], (int)$user['sede_id'])) {
-                Response::error('No autorizado desde este equipo.');
+                Response::error("No autorizado desde este equipo. Equipo detectado: \"{$hostDetectado}\"");
             }
         }
 
@@ -254,11 +268,24 @@ switch ($action) {
         break;
 
     // -------------------------------------------------------
-    // GET: pendientes de aprobación
+    // GET: pendientes de aprobación (con filtros opcionales)
     // -------------------------------------------------------
     case 'pendientes':
         Auth::requireRole('admin', 'supervisor');
-        $sedeId = Auth::user()['sede_id'];
+        $sedeId    = Auth::user()['sede_id'];
+        $usuarioId = !empty($_GET['usuario_id'])  ? (int)$_GET['usuario_id']  : null;
+        $cargoId   = !empty($_GET['cargo_id'])    ? (int)$_GET['cargo_id']    : null;
+        $desde     = !empty($_GET['fecha_desde']) ? $_GET['fecha_desde']      : null;
+        $hasta     = !empty($_GET['fecha_hasta']) ? $_GET['fecha_hasta']      : null;
+
+        $where  = ["m.aprobado = 'pendiente'", "m.estado NOT IN ('puntual','cierre_automatico')"];
+        $params = [];
+
+        if ($sedeId)    { $where[] = 'm.sede_id = ?';    $params[] = $sedeId; }
+        if ($usuarioId) { $where[] = 'm.usuario_id = ?'; $params[] = $usuarioId; }
+        if ($cargoId)   { $where[] = 'u.cargo_id = ?';   $params[] = $cargoId; }
+        if ($desde)     { $where[] = 'm.fecha >= ?';     $params[] = $desde; }
+        if ($hasta)     { $where[] = 'm.fecha <= ?';     $params[] = $hasta; }
 
         $rows = DB::fetchAll(
             'SELECT m.*, u.nombre, u.apellido, c.nombre AS cargo_nombre, s.nombre AS sede_nombre
@@ -266,14 +293,71 @@ switch ($action) {
              JOIN usuarios u ON u.id = m.usuario_id
              LEFT JOIN cargos c ON c.id = u.cargo_id
              LEFT JOIN sedes s ON s.id = m.sede_id
-             WHERE m.aprobado = \'pendiente\'
-               AND m.estado NOT IN (\'puntual\', \'cierre_automatico\')
-               AND (? IS NULL OR m.sede_id = ?)
-             ORDER BY m.fecha_hora DESC',
-            [$sedeId, $sedeId]
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY m.fecha DESC, m.hora ASC',
+            $params
         );
-
         Response::success($rows);
+        break;
+
+    // -------------------------------------------------------
+    // POST: aprobar / rechazar en lote
+    // -------------------------------------------------------
+    case 'aprobar_masivo':
+        Auth::requireRole('admin', 'supervisor');
+        if ($method !== 'POST') Response::error('Método no permitido', 405);
+
+        $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+        $ids     = array_values(array_filter(array_map('intval', $body['ids'] ?? []), fn($v) => $v > 0));
+        $dec     = $body['decision'] ?? '';
+        $obs     = Helpers::clean($body['observacion'] ?? '');
+        $sedeId  = Auth::user()['sede_id'];
+
+        if (!in_array($dec, ['aprobado', 'rechazado'], true)) {
+            Response::error('Decisión inválida.');
+        }
+
+        if (!empty($ids)) {
+            // IDs explícitos
+            $ph        = implode(',', array_fill(0, count($ids), '?'));
+            $p         = [$dec, Auth::id(), $obs, ...$ids];
+            $sedeWhere = $sedeId ? ' AND sede_id = ?' : '';
+            if ($sedeId) $p[] = $sedeId;
+            $count = DB::execute(
+                "UPDATE marcaciones
+                 SET aprobado=?, supervisor_id=?, supervisor_observacion=?, aprobado_at=NOW()
+                 WHERE id IN ($ph) AND aprobado='pendiente' $sedeWhere",
+                $p
+            );
+        } else {
+            // Todas las que coincidan con los filtros enviados
+            $usuarioId = !empty($body['usuario_id'])  ? (int)$body['usuario_id']  : null;
+            $cargoId   = !empty($body['cargo_id'])    ? (int)$body['cargo_id']    : null;
+            $desde     = !empty($body['fecha_desde']) ? $body['fecha_desde']      : null;
+            $hasta     = !empty($body['fecha_hasta']) ? $body['fecha_hasta']      : null;
+
+            $where  = ["aprobado='pendiente'", "estado NOT IN ('puntual','cierre_automatico')"];
+            $params = [$dec, Auth::id(), $obs];
+
+            if ($sedeId)    { $where[] = 'sede_id = ?';    $params[] = $sedeId; }
+            if ($usuarioId) { $where[] = 'usuario_id = ?'; $params[] = $usuarioId; }
+            if ($desde)     { $where[] = 'fecha >= ?';     $params[] = $desde; }
+            if ($hasta)     { $where[] = 'fecha <= ?';     $params[] = $hasta; }
+            if ($cargoId) {
+                $where[] = 'usuario_id IN (SELECT id FROM usuarios WHERE cargo_id = ?)';
+                $params[] = $cargoId;
+            }
+
+            $count = DB::execute(
+                'UPDATE marcaciones
+                 SET aprobado=?, supervisor_id=?, supervisor_observacion=?, aprobado_at=NOW()
+                 WHERE ' . implode(' AND ', $where),
+                $params
+            );
+        }
+
+        $accion = $dec === 'aprobado' ? 'aprobada' : 'rechazada';
+        Response::success(['count' => $count], "{$count} marcación(es) {$accion}(s)");
         break;
 
     default:

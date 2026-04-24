@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 Auth::requireLogin();
 
 $action = $_GET['action'] ?? '';
+$method = $_SERVER['REQUEST_METHOD'];
 
 switch ($action) {
 
@@ -60,7 +61,7 @@ switch ($action) {
         break;
 
     // -------------------------------------------------------
-    // Preliquidación semanal
+    // Preliquidación semanal (legacy — se mantiene para empleados)
     // -------------------------------------------------------
     case 'preliquidacion':
         $uid  = (int)($_GET['usuario_id'] ?? Auth::id());
@@ -80,6 +81,135 @@ switch ($action) {
         $data['usuario'] = $usuario;
 
         Response::success($data);
+        break;
+
+    // -------------------------------------------------------
+    // Preliquidación masiva: uno o muchos empleados, rango libre
+    // -------------------------------------------------------
+    case 'preliquidacion_masiva':
+        Auth::requireLogin();
+        if ($method !== 'POST') Response::error('Método no permitido', 405);
+
+        $body       = json_decode(file_get_contents('php://input'), true) ?? [];
+        $usuarioIds = array_values(array_filter(array_map('intval', $body['usuario_ids'] ?? []), fn($v) => $v > 0));
+        $desde      = $body['fecha_desde'] ?? date('Y-m-01');
+        $hasta      = $body['fecha_hasta'] ?? date('Y-m-d');
+        $sedeIdAuth = Auth::user()['sede_id'];
+
+        // Empleado solo se ve a sí mismo
+        if (Auth::hasRole('empleado')) {
+            $usuarioIds = [Auth::id()];
+        } elseif (!Auth::hasRole('admin', 'supervisor')) {
+            Response::error('Sin permiso', 403);
+        }
+
+        // Sin IDs explícitos → todos los empleados del scope del supervisor
+        if (empty($usuarioIds)) {
+            $w = ["u.activo = 1", "u.rol = 'empleado'"];
+            $p = [];
+            if ($sedeIdAuth && Auth::hasRole('supervisor')) {
+                $w[] = 'u.sede_id = ?'; $p[] = $sedeIdAuth;
+            }
+            $usuarioIds = array_column(
+                DB::fetchAll('SELECT id FROM usuarios u WHERE ' . implode(' AND ', $w), $p),
+                'id'
+            );
+        }
+
+        if (empty($usuarioIds)) { Response::success([]); break; }
+
+        $resultados = [];
+        foreach ($usuarioIds as $uid) {
+            // Scope de sede para supervisores
+            if (Auth::hasRole('supervisor') && $sedeIdAuth) {
+                $empSede = DB::fetchOne('SELECT sede_id FROM usuarios WHERE id = ?', [$uid]);
+                if (!$empSede || (int)$empSede['sede_id'] !== (int)$sedeIdAuth) continue;
+            }
+
+            $rows = DB::fetchAll(
+                'SELECT rd.fecha, rd.dia_semana, rd.es_festivo, rd.horas_netas,
+                        rd.hora_entrada, rd.hora_salida, rd.estado_dia,
+                        f.nombre AS nombre_festivo,
+                        u.nombre, u.apellido,
+                        c.nombre AS cargo_nombre, s.nombre AS sede_nombre
+                 FROM resumen_diario rd
+                 JOIN usuarios u  ON u.id  = rd.usuario_id
+                 LEFT JOIN cargos c ON c.id = u.cargo_id
+                 LEFT JOIN sedes  s ON s.id = u.sede_id
+                 LEFT JOIN festivos f ON f.fecha = rd.fecha
+                 WHERE rd.usuario_id = ? AND rd.fecha BETWEEN ? AND ?
+                 ORDER BY rd.fecha ASC',
+                [$uid, $desde, $hasta]
+            );
+
+            if (empty($rows)) {
+                $uInfo = DB::fetchOne(
+                    'SELECT u.nombre, u.apellido, c.nombre AS cargo_nombre, s.nombre AS sede_nombre
+                     FROM usuarios u
+                     LEFT JOIN cargos c ON c.id = u.cargo_id
+                     LEFT JOIN sedes  s ON s.id = u.sede_id
+                     WHERE u.id = ?',
+                    [$uid]
+                );
+                if (!$uInfo) continue;
+                $resultados[] = array_merge(['usuario_id' => $uid], $uInfo, [
+                    'desde' => $desde, 'hasta' => $hasta,
+                    'dias_normales' => 0, 'dias_festivos' => 0, 'dias_domingos' => 0,
+                    'horas_normales' => 0.0, 'horas_festivos' => 0.0, 'horas_domingos' => 0.0,
+                    'horas_debidas' => 0.0, 'diferencia' => 0.0, 'detalle' => [],
+                ]);
+                continue;
+            }
+
+            $diasNorm = $diasFest = $diasDom = 0;
+            $hNorm = $hFest = $hDom = 0.0;
+            $detalle = [];
+
+            foreach ($rows as $d) {
+                $dow    = (int)$d['dia_semana'];
+                $fest   = (bool)$d['es_festivo'];
+                $horas  = (float)$d['horas_netas'];
+
+                if ($dow === 0)     { $tipo = 'domingo'; $diasDom++;  $hDom  += $horas; }
+                elseif ($fest)      { $tipo = 'festivo'; $diasFest++; $hFest += $horas; }
+                else                { $tipo = 'normal';  $diasNorm++; $hNorm += $horas; }
+
+                $detalle[] = [
+                    'fecha'          => $d['fecha'],
+                    'dia'            => DIAS_SEMANA[$dow],
+                    'tipo'           => $tipo,
+                    'es_festivo'     => $fest,
+                    'nombre_festivo' => $d['nombre_festivo'],
+                    'hora_entrada'   => $d['hora_entrada'],
+                    'hora_salida'    => $d['hora_salida'],
+                    'horas_netas'    => $horas,
+                    'estado_dia'     => $d['estado_dia'],
+                ];
+            }
+
+            $horasDebidas = round($diasNorm * 7.33, 2);
+
+            $resultados[] = [
+                'usuario_id'    => $uid,
+                'nombre'        => $rows[0]['nombre'],
+                'apellido'      => $rows[0]['apellido'],
+                'cargo_nombre'  => $rows[0]['cargo_nombre'],
+                'sede_nombre'   => $rows[0]['sede_nombre'],
+                'desde'         => $desde,
+                'hasta'         => $hasta,
+                'dias_normales' => $diasNorm,
+                'dias_festivos' => $diasFest,
+                'dias_domingos' => $diasDom,
+                'horas_normales'=> round($hNorm, 2),
+                'horas_festivos'=> round($hFest, 2),
+                'horas_domingos'=> round($hDom, 2),
+                'horas_debidas' => $horasDebidas,
+                'diferencia'    => round($hNorm - $horasDebidas, 2),
+                'detalle'       => $detalle,
+            ];
+        }
+
+        Response::success($resultados);
         break;
 
     // -------------------------------------------------------

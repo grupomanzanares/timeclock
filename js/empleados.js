@@ -60,8 +60,8 @@ const Empleados = (() => {
     ));
   }
 
-  function _opsCargos()  { return (window.CARGOS||[]).map(c => `<option value="${c.id}">${c.nombre}</option>`).join(''); }
-  function _opsSedes()   { return (window.SEDES||[]).map(s => `<option value="${s.id}">${s.nombre}</option>`).join(''); }
+  function _opsCargos()  { return (typeof CARGOS !== 'undefined' ? CARGOS : []).map(c => `<option value="${c.id}">${c.nombre}</option>`).join(''); }
+  function _opsSedes()   { return (typeof SEDES  !== 'undefined' ? SEDES  : []).map(s => `<option value="${s.id}">${s.nombre}</option>`).join(''); }
   function _formHtml(u = {}) {
     return `<div class="space-y-3">
       <div class="grid grid-cols-2 gap-3">

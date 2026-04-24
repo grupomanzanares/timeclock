@@ -11,10 +11,13 @@ const Turnos = (() => {
   });
 
   async function cargarTurnos() {
-    const tbody = document.getElementById('tbody-turnos');
-    if (!tbody) return;
+    // Siempre cargamos los datos (los necesita el modal de asignar aunque el rol sea supervisor)
     const res = await TC.get('/api/turnos.php?action=listar');
     listaTurnos = res.data || [];
+
+    const tbody = document.getElementById('tbody-turnos');
+    if (!tbody) return; // Supervisor no tiene esa tabla; solo detenemos el render
+
     if (!listaTurnos.length) {
       tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-sm text-gray-400">Sin turnos registrados</td></tr>';
       return;
