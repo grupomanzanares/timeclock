@@ -165,11 +165,6 @@ const Cfg = (() => {
       <tr class="border-b border-gray-50">
         <td class="py-3 pr-4 font-medium">${c.nombre}</td>
         <td class="py-3 pr-4 text-sm text-gray-500">${c.descripcion||'—'}</td>
-        <td class="py-3 pr-4">
-          <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-mono font-medium">
-            ${c.minutos_descanso} min
-          </span>
-        </td>
         <td class="py-3">
           <button onclick="Cfg.abrirCargo(${c.id})" class="text-indigo-600 hover:underline text-xs mr-3">
             <i class="fas fa-pen"></i> Editar</button>
@@ -185,12 +180,6 @@ const Cfg = (() => {
           <input id="ca-nom" class="tc-input" value="${c?.nombre||''}"></div>
         <div><label class="tc-label">Descripción</label>
           <input id="ca-desc" class="tc-input" value="${c?.descripcion||''}"></div>
-        <div>
-          <label class="tc-label">Minutos de descanso por jornada</label>
-          <input id="ca-desc2" type="number" min="0" max="480" class="tc-input"
-                 value="${c?.minutos_descanso ?? 60}">
-          <p class="text-xs text-gray-400 mt-1">Estos minutos se descuentan del cálculo de horas laboradas</p>
-        </div>
       </div>`,
       `<button onclick="TC.closeModal()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg">Cancelar</button>
        <button onclick="Cfg.guardarCargo(${id||'null'})" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Guardar</button>`
@@ -199,10 +188,9 @@ const Cfg = (() => {
 
   async function guardarCargo(id) {
     const body = {
-      id:               id || undefined,
-      nombre:           document.getElementById('ca-nom').value,
-      descripcion:      document.getElementById('ca-desc').value,
-      minutos_descanso: parseInt(document.getElementById('ca-desc2').value) || 60,
+      id:          id || undefined,
+      nombre:      document.getElementById('ca-nom').value,
+      descripcion: document.getElementById('ca-desc').value,
     };
     const res = await TC.post('/api/config.php?action=cargos_guardar', body);
     TC.closeModal();

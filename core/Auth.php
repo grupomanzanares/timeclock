@@ -6,8 +6,7 @@ class Auth
     public static function login(string $cedula, string $password): bool
     {
         $user = DB::fetchOne(
-            'SELECT u.*, c.nombre AS cargo_nombre, c.minutos_descanso,
-                    s.nombre AS sede_nombre
+            'SELECT u.*, c.nombre AS cargo_nombre, s.nombre AS sede_nombre
              FROM usuarios u
              LEFT JOIN cargos c ON c.id = u.cargo_id
              LEFT JOIN sedes s ON s.id = u.sede_id
@@ -30,7 +29,6 @@ class Auth
             'rol'             => $user['rol'],
             'cargo_id'        => $user['cargo_id'],
             'cargo_nombre'    => $user['cargo_nombre'],
-            'minutos_descanso'=> (int)($user['minutos_descanso'] ?? 60),
             'sede_id'         => $user['sede_id'],
             'sede_nombre'     => $user['sede_nombre'],
             'equipo_permitido'=> $user['equipo_permitido'],

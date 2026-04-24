@@ -26,6 +26,7 @@ switch ($action) {
         $horaIni   = $body['hora_inicio'] ?? '';
         $horaFin   = $body['hora_fin'] ?? '';
         $nocturno  = (int)($body['nocturno'] ?? 0);
+        $minDesc   = max(0, (int)($body['minutos_descanso'] ?? 0));
 
         if (!$nombre || !$horaIni || !$horaFin) Response::error('Datos incompletos.');
 
@@ -33,8 +34,8 @@ switch ($action) {
         if (!$nocturno && $horaFin < $horaIni) $nocturno = 1;
 
         $id = DB::insert(
-            'INSERT INTO turnos (nombre, hora_inicio, hora_fin, nocturno) VALUES (?, ?, ?, ?)',
-            [$nombre, $horaIni, $horaFin, $nocturno]
+            'INSERT INTO turnos (nombre, hora_inicio, hora_fin, nocturno, minutos_descanso) VALUES (?, ?, ?, ?, ?)',
+            [$nombre, $horaIni, $horaFin, $nocturno, $minDesc]
         );
         Response::success(['id' => $id], 'Turno creado');
         break;
@@ -49,12 +50,13 @@ switch ($action) {
         if (!$id) Response::error('ID requerido');
 
         DB::execute(
-            'UPDATE turnos SET nombre=?, hora_inicio=?, hora_fin=?, nocturno=? WHERE id=?',
+            'UPDATE turnos SET nombre=?, hora_inicio=?, hora_fin=?, nocturno=?, minutos_descanso=? WHERE id=?',
             [
                 Helpers::clean($body['nombre'] ?? ''),
                 $body['hora_inicio'] ?? '',
                 $body['hora_fin'] ?? '',
                 (int)($body['nocturno'] ?? 0),
+                max(0, (int)($body['minutos_descanso'] ?? 0)),
                 $id,
             ]
         );

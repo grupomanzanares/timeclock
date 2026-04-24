@@ -11,7 +11,7 @@ class Turno
         $dow = (int)date('w', strtotime($fecha)); // 0=Dom ... 6=Sab
 
         return DB::fetchOne(
-            'SELECT at.*, t.nombre, t.hora_inicio, t.hora_fin, t.nocturno
+            'SELECT at.*, t.nombre, t.hora_inicio, t.hora_fin, t.nocturno, t.minutos_descanso
              FROM asignacion_turnos at
              JOIN turnos t ON t.id = at.turno_id
              WHERE at.usuario_id = ?
@@ -186,9 +186,9 @@ class Turno
         $dow       = (int)$dtEntrada->format('w');
         $esFestivo = Helpers::esFestivo($fecha) ? 1 : 0;
 
-        // Minutos de descanso: del cargo del usuario
-        $user       = DB::fetchOne('SELECT cargo_id FROM usuarios WHERE id = ?', [$usuarioId]);
-        $minDesc    = (int)(Helpers::getParam('minutos_descanso_global', $user['cargo_id'] ?? null) ?? 60);
+        // Minutos de descanso: del turno asignado al día
+        $turnoDelDia = self::obtenerAsignado($usuarioId, $fecha);
+        $minDesc     = (int)($turnoDelDia['minutos_descanso'] ?? 0);
 
         if ($salida) {
             $dtSalida  = new \DateTime($salida['fecha'] . ' ' . $salida['hora']);

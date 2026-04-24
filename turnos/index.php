@@ -29,6 +29,7 @@ require_once ROOT_PATH . '/views/layout/header.php';
             <th class="text-left py-3 pr-4">Entrada</th>
             <th class="text-left py-3 pr-4">Salida</th>
             <th class="text-left py-3 pr-4">Tipo</th>
+            <th class="text-left py-3 pr-4">Descanso</th>
             <th class="text-left py-3">Acciones</th>
           </tr>
         </thead>

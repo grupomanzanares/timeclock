@@ -54,24 +54,23 @@ switch ($action) {
 
     case 'cargos_guardar':
         if ($method !== 'POST') Response::error('Método no permitido', 405);
-        $body    = json_decode(file_get_contents('php://input'), true) ?? [];
-        $id      = (int)($body['id'] ?? 0);
-        $nombre  = Helpers::clean($body['nombre'] ?? '');
-        $minDesc = (int)($body['minutos_descanso'] ?? 60);
-        $desc    = Helpers::clean($body['descripcion'] ?? '');
+        $body   = json_decode(file_get_contents('php://input'), true) ?? [];
+        $id     = (int)($body['id'] ?? 0);
+        $nombre = Helpers::clean($body['nombre'] ?? '');
+        $desc   = Helpers::clean($body['descripcion'] ?? '');
 
         if (!$nombre) Response::error('Nombre requerido');
 
         $isUpdate = $id > 0;
         if ($isUpdate) {
             DB::execute(
-                'UPDATE cargos SET nombre=?, descripcion=?, minutos_descanso=? WHERE id=?',
-                [$nombre, $desc, $minDesc, $id]
+                'UPDATE cargos SET nombre=?, descripcion=? WHERE id=?',
+                [$nombre, $desc, $id]
             );
         } else {
             $id = DB::insert(
-                'INSERT INTO cargos (nombre, descripcion, minutos_descanso) VALUES (?, ?, ?)',
-                [$nombre, $desc, $minDesc]
+                'INSERT INTO cargos (nombre, descripcion) VALUES (?, ?)',
+                [$nombre, $desc]
             );
         }
         Response::success(['id' => (int)$id], $isUpdate ? 'Cargo actualizado' : 'Cargo creado');

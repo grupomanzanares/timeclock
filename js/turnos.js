@@ -32,6 +32,11 @@ const Turnos = (() => {
             ? '<span class="px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700">Nocturno</span>'
             : '<span class="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">Diurno</span>'}
         </td>
+        <td class="py-3 pr-4">
+          <span class="px-2 py-0.5 rounded-lg text-xs font-mono bg-gray-100 text-gray-600">
+            ${t.minutos_descanso || 0} min
+          </span>
+        </td>
         <td class="py-3">
           <button onclick="Turnos.abrirEditar(${t.id})" class="text-indigo-600 hover:underline text-xs mr-3">
             <i class="fas fa-pen"></i> Editar
@@ -108,6 +113,15 @@ const Turnos = (() => {
           <div><label class="tc-label">Hora fin</label>
             <input id="t-fin" type="time" class="tc-input" value="${t.hora_fin?.slice(0,5)||''}"></div>
         </div>
+        <div>
+          <label class="tc-label">Minutos de descanso (almuerzo / breaks)</label>
+          <input id="t-desc" type="number" min="0" max="480" class="tc-input"
+                 value="${t.minutos_descanso ?? 0}" placeholder="0">
+          <p class="text-xs text-gray-400 mt-1">
+            Estos minutos se descuentan automáticamente del tiempo bruto al calcular horas laboradas.
+            Use 0 si el descanso no se descuenta.
+          </p>
+        </div>
         <label class="flex items-center gap-2 text-sm cursor-pointer">
           <input id="t-noc" type="checkbox" ${t.nocturno?'checked':''} class="rounded">
           Turno nocturno (cruza medianoche)
@@ -134,10 +148,11 @@ const Turnos = (() => {
   async function guardarTurno(id) {
     const body = {
       id: id || undefined,
-      nombre:      document.getElementById('t-nombre').value,
-      hora_inicio: document.getElementById('t-ini').value + ':00',
-      hora_fin:    document.getElementById('t-fin').value + ':00',
-      nocturno:    document.getElementById('t-noc').checked ? 1 : 0,
+      nombre:            document.getElementById('t-nombre').value,
+      hora_inicio:       document.getElementById('t-ini').value + ':00',
+      hora_fin:          document.getElementById('t-fin').value + ':00',
+      nocturno:          document.getElementById('t-noc').checked ? 1 : 0,
+      minutos_descanso:  parseInt(document.getElementById('t-desc').value) || 0,
     };
     const action = id ? 'editar' : 'crear';
     const res = await TC.post(`/api/turnos.php?action=${action}`, body);
