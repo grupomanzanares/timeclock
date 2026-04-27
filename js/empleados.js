@@ -134,9 +134,8 @@ const Empleados = (() => {
     };
     const action = id ? 'editar' : 'crear';
     const res = await TC.post(`/api/usuarios.php?action=${action}`, body);
-    TC.closeModal();
     TC.toast(res.message, res.success ? 'success' : 'error');
-    if (res.success) cargar();
+    if (res.success) { TC.closeModal(); cargar(); }
   }
 
   async function eliminar(id) {

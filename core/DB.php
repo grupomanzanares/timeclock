@@ -20,7 +20,6 @@ class DB
                     PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone='-05:00'",
                 ]);
             } catch (PDOException $e) {
-                Logger::error('DB connection failed: ' . $e->getMessage());
                 Response::error('Error de conexión a base de datos', 503);
                 exit;
             }

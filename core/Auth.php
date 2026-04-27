@@ -15,7 +15,6 @@ class Auth
         );
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
-            Logger::warning("Intento de login fallido cedula: $cedula");
             return false;
         }
 
@@ -35,7 +34,6 @@ class Auth
             'login_at'        => time(),
         ];
 
-        Logger::info("Login exitoso: {$user['email']} (ID {$user['id']})");
         return true;
     }
 

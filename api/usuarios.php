@@ -89,11 +89,11 @@ switch ($action) {
             $fields[] = 'rol=?'; $params[] = $body['rol'];
         }
         foreach (['cargo_id','sede_id'] as $f) {
-            if (isset($body[$f])) { $fields[] = "$f=?"; $params[] = (int)$body[$f] ?: null; }
+            if (array_key_exists($f, $body)) { $fields[] = "$f=?"; $params[] = (int)($body[$f] ?? 0) ?: null; }
         }
         if (array_key_exists('equipo_permitido', $body)) {
             $fields[] = 'equipo_permitido=?';
-            $params[] = strtolower(Helpers::clean($body['equipo_permitido'])) ?: null;
+            $params[] = strtolower(Helpers::clean($body['equipo_permitido'] ?? '')) ?: null;
         }
         if (!empty($body['password']) && strlen($body['password']) >= 8) {
             $fields[] = 'password_hash=?';
