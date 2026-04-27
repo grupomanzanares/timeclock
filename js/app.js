@@ -160,6 +160,39 @@ const TC = (() => {
         window.location.href = APP.baseUrl + '/login.php';
     }
 
+    // ─── Preguntar cierre de sesión (empleados) ───────────────
+    function preguntarLogout(tipo) {
+        const tipoLabel = tipo === 'entrada' ? 'entrada' : 'salida';
+        openModal(
+            '¿Cerrar sesión?',
+            `<div style="display:flex;align-items:flex-start;gap:.85rem;">
+                <i class="fas fa-right-from-bracket" style="font-size:1.6rem;color:#dc2626;margin-top:.15rem;flex-shrink:0;"></i>
+                <div>
+                    <p style="color:#1e293b;font-size:.95rem;font-weight:700;margin:0 0 .35rem;">
+                        ${tipoLabel.charAt(0).toUpperCase() + tipoLabel.slice(1)} registrada exitosamente
+                    </p>
+                    <p style="color:#64748b;font-size:.88rem;line-height:1.55;margin:0;">
+                        ¿Deseas cerrar sesión ahora?
+                    </p>
+                </div>
+            </div>`,
+            `<button onclick="TC.closeModal()"
+                     style="padding:.55rem 1rem;border:1.5px solid #e2e8f0;border-radius:10px;
+                            background:#fff;color:#64748b;font-family:inherit;font-size:.82rem;
+                            font-weight:700;cursor:pointer;">Seguir aquí</button>
+             <button id="btn-logout-si"
+                     style="padding:.55rem 1rem;border:none;border-radius:10px;
+                            background:#dc2626;color:#fff;font-family:inherit;font-size:.82rem;
+                            font-weight:800;cursor:pointer;display:flex;align-items:center;gap:.4rem;">
+                 <i class="fas fa-right-from-bracket"></i> Cerrar sesión
+             </button>`
+        );
+        document.getElementById('btn-logout-si').onclick = () => {
+            closeModal();
+            logout();
+        };
+    }
+
     // ─── Init ─────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
         iniciarReloj('reloj-header');
@@ -183,6 +216,6 @@ const TC = (() => {
         toast, openModal, closeModal,
         openSidebar, closeSidebar,
         iniciarReloj, fmtHora, fmtFecha, fmtMin, badgeEstado,
-        confirmar, btnLoading, logout,
+        confirmar, btnLoading, logout, preguntarLogout,
     };
 })();

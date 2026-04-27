@@ -221,16 +221,11 @@ body { font-family: 'Nunito', system-ui, sans-serif; }
                 Controla tu<br>jornada laboral
             </h2>
             <p class="text-blue-200/80 text-sm font-medium mt-3 leading-relaxed">
-                Registro preciso de horas, turnos y preliquidación de nómina.
+                
             </p>
 
             <!-- Features -->
-            <div class="mt-7 space-y-3">
-                <div class="feature-item"><div class="feature-dot"></div>Marcación de entrada y salida</div>
-                <div class="feature-item"><div class="feature-dot"></div>Gestión de turnos por semana</div>
-                <div class="feature-item"><div class="feature-dot"></div>Preliquidación nómina automática</div>
-                <div class="feature-item"><div class="feature-dot"></div>Reportes exportables en Excel</div>
-            </div>
+
         </div>
 
         <!-- Reloj -->

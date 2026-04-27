@@ -89,6 +89,7 @@ async function cargarMarcacionRapida() {
     TC.toast(res.message, res.success ? (res.data?.estado === 'puntual' ? 'success' : 'warning') : 'error');
     if (res.success) {
       setTimeout(() => { cargarMarcacionRapida(); cargarUltimasMarcaciones(); }, 800);
+      if (APP.rol === 'empleado') setTimeout(() => TC.preguntarLogout(btnTipo), 900);
     }
   });
 }

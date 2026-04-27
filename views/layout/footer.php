@@ -55,10 +55,10 @@
 }
 </style>
 
-<script src="<?= BASE_URL ?>/js/app.js"></script>
+<script src="<?= BASE_URL ?>/js/app.js?v=<?= filemtime(ROOT_PATH.'/js/app.js') ?>"></script>
 <?php if (!empty($extraJs)): ?>
   <?php foreach ((array)$extraJs as $js): ?>
-    <script src="<?= BASE_URL ?>/js/<?= htmlspecialchars($js) ?>"></script>
+    <script src="<?= BASE_URL ?>/js/<?= htmlspecialchars($js) ?>?v=<?= filemtime(ROOT_PATH.'/js/'.htmlspecialchars($js)) ?>"></script>
   <?php endforeach; ?>
 <?php endif; ?>
 </body>

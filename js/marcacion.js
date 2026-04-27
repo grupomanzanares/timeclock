@@ -143,6 +143,7 @@ function renderBoton(d) {
     if (res.success) {
       document.getElementById('observacion-marc').value = '';
       await cargarEstado();
+      if (APP.rol === 'empleado') TC.preguntarLogout(tipo);
     }
   };
 }
