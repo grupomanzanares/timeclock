@@ -36,21 +36,40 @@ const Cfg = (() => {
       </tr>`).join('');
   }
 
+  const PARAM_CLAVES = [
+    { v: 'tolerancia_entrada_antes',   label: 'tolerancia_entrada_antes',   hint: 'Min. antes del inicio del turno para marcar entrada  (default 10)' },
+    { v: 'tolerancia_entrada_despues', label: 'tolerancia_entrada_despues', hint: 'Min. después del inicio que aún se considera puntual  (default 15)' },
+    { v: 'tolerancia_salida_antes',    label: 'tolerancia_salida_antes',    hint: 'Min. antes del fin del turno para marcar salida  (default 10)' },
+    { v: 'tolerancia_salida_despues',  label: 'tolerancia_salida_despues',  hint: 'Min. después del fin del turno que se consideran salida normal  (default 30)' },
+    { v: 'minutos_descanso_global',    label: 'minutos_descanso_global',    hint: 'Min. de descanso a descontar cuando el turno no tiene descanso definido  (default 0)' },
+    { v: 'cerrar_turno_auto',          label: 'cerrar_turno_auto',          hint: '1 = cerrar turnos sin salida al hacer login  |  0 = no  (default 1)' },
+    { v: 'requiere_aprobacion',        label: 'requiere_aprobacion',        hint: '1 = marcaciones fuera de tolerancia quedan pendientes de aprobación  |  0 = auto-aprueba todo  (default 1)' },
+  ];
+
   function abrirParam(p = {}) {
     const optsCargos = (typeof CARGOS_CFG !== 'undefined' ? CARGOS_CFG : []).map(c =>
       `<option value="${c.id}" ${p.cargo_id == c.id ? 'selected' : ''}>${c.nombre}</option>`
     ).join('');
+    const optsClaves = PARAM_CLAVES.map(c =>
+      `<option value="${c.v}" ${p.clave === c.v ? 'selected' : ''}>${c.label}</option>`
+    ).join('');
+    const hintActual = PARAM_CLAVES.find(c => c.v === p.clave)?.hint || '';
     TC.openModal(p.id ? 'Editar parámetro' : 'Nuevo parámetro', `
       <div class="space-y-3">
-        <div><label class="tc-label">Clave</label>
-          <input id="pm-clave" class="tc-input" value="${p.clave||''}" placeholder="tolerancia_entrada_antes"></div>
+        <div>
+          <label class="tc-label">Clave</label>
+          <select id="pm-clave" class="tc-input" onchange="Cfg.actualizarHintParam(this.value)">
+            <option value="">Seleccione una clave…</option>${optsClaves}
+          </select>
+          <p id="pm-hint" class="mt-1 text-xs text-gray-400 leading-snug">${hintActual}</p>
+        </div>
         <div><label class="tc-label">Valor</label>
-          <input id="pm-valor" class="tc-input" value="${p.valor||''}" placeholder="10"></div>
-        <div><label class="tc-label">Aplica a cargo (vacío = global)</label>
+          <input id="pm-valor" class="tc-input" value="${p.valor||''}" placeholder="Ej: 10"></div>
+        <div><label class="tc-label">Aplica a cargo <span class="text-gray-400 font-normal">(vacío = global para todos)</span></label>
           <select id="pm-cargo" class="tc-input">
             <option value="">Global</option>${optsCargos}
           </select></div>
-        <div><label class="tc-label">Descripción</label>
+        <div><label class="tc-label">Descripción <span class="text-gray-400 font-normal">(opcional, para recordar el propósito)</span></label>
           <input id="pm-desc" class="tc-input" value="${p.descripcion||''}"></div>
       </div>`,
       `<button onclick="TC.closeModal()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg">Cancelar</button>
@@ -58,18 +77,24 @@ const Cfg = (() => {
     );
   }
 
+  function actualizarHintParam(clave) {
+    const info = PARAM_CLAVES.find(c => c.v === clave);
+    const el = document.getElementById('pm-hint');
+    if (el) el.textContent = info ? info.hint : '';
+  }
+
   async function guardarParam() {
     const body = {
-      clave:       document.getElementById('pm-clave').value.trim(),
+      clave:       document.getElementById('pm-clave').value,
       valor:       document.getElementById('pm-valor').value.trim(),
       cargo_id:    document.getElementById('pm-cargo').value || null,
       descripcion: document.getElementById('pm-desc').value,
     };
-    if (!body.clave || body.valor === '') { TC.toast('Clave y valor requeridos', 'warning'); return; }
+    if (!body.clave) { TC.toast('Seleccione una clave', 'warning'); return; }
+    if (body.valor === '') { TC.toast('El valor es requerido', 'warning'); return; }
     const res = await TC.post('/api/config.php?action=parametros_guardar', body);
-    TC.closeModal();
     TC.toast(res.message, res.success ? 'success' : 'error');
-    if (res.success) cargarParams();
+    if (res.success) { TC.closeModal(); cargarParams(); }
   }
 
   async function eliminarParam(id) {
@@ -353,7 +378,7 @@ const Cfg = (() => {
 
   return {
     // params
-    abrirParam, guardarParam, eliminarParam,
+    abrirParam, guardarParam, eliminarParam, actualizarHintParam,
     // sedes
     abrirSede, guardarSede, eliminarSede,
     // cargos

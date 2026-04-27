@@ -39,8 +39,12 @@ switch ($action) {
 
         $_SESSION[$key] = ['count' => 0, 'ts' => time()];
 
-        // Cierre automático de turnos pendientes
-        $cerradas = Turno::cerrarPendientes(Auth::id());
+        // Cierre automático de turnos pendientes (respeta el parámetro cerrar_turno_auto)
+        $cargoIdLogin = (int)(Auth::user()['cargo_id'] ?? 0) ?: null;
+        $cerradas = [];
+        if ((Helpers::getParam('cerrar_turno_auto', $cargoIdLogin) ?? '1') === '1') {
+            $cerradas = Turno::cerrarPendientes(Auth::id());
+        }
 
         Response::success([
             'user'           => Auth::user(),

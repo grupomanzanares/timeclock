@@ -189,6 +189,11 @@ class Turno
         // Minutos de descanso: del turno asignado al día
         $turnoDelDia = self::obtenerAsignado($usuarioId, $fecha);
         $minDesc     = (int)($turnoDelDia['minutos_descanso'] ?? 0);
+        if ($minDesc === 0) {
+            $uRow    = DB::fetchOne('SELECT cargo_id FROM usuarios WHERE id = ?', [$usuarioId]);
+            $cargoId = $uRow ? (int)$uRow['cargo_id'] : null;
+            $minDesc = (int)(Helpers::getParam('minutos_descanso_global', $cargoId) ?? 0);
+        }
 
         if ($salida) {
             $dtSalida  = new \DateTime($salida['fecha'] . ' ' . $salida['hora']);

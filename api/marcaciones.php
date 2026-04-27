@@ -165,15 +165,19 @@ switch ($action) {
 
         $hostname = Helpers::getClientHostname();
 
+        // Determinar si la marcación se auto-aprueba o queda pendiente
+        $requiereAprobacion = (Helpers::getParam('requiere_aprobacion', $cargoId) ?? '1') === '1';
+        $aprobacion = ($estado === 'puntual' || !$requiereAprobacion) ? 'aprobado' : 'pendiente';
+
         $id = DB::insert(
             'INSERT INTO marcaciones
                 (usuario_id, tipo, fecha, hora, fecha_hora, sede_id,
-                 nombre_equipo, observacion, estado, minutos_diferencia)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                 nombre_equipo, observacion, estado, minutos_diferencia, aprobado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $uid, $tipo, $fecha, $hora, $fechaHora,
                 $user['sede_id'], $hostname, $observacion,
-                $estado, $minDiferencia,
+                $estado, $minDiferencia, $aprobacion,
             ]
         );
 

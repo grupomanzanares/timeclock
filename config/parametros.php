@@ -45,24 +45,60 @@ require_once ROOT_PATH . '/views/layout/header.php';
 
   <!-- Referencia de claves -->
   <div class="tc-card p-5">
-    <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-      <i class="fas fa-circle-info text-indigo-400"></i> Claves disponibles
+    <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+      <i class="fas fa-circle-info text-indigo-400"></i> Claves disponibles y cómo funcionan
     </h3>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+    <div class="space-y-3">
       <?php
       $claves = [
-        'tolerancia_entrada_antes'   => 'Min. antes del turno para marcar entrada',
-        'tolerancia_entrada_despues' => 'Min. después del inicio para considerar puntual',
-        'tolerancia_salida_antes'    => 'Min. antes de fin de turno para marcar salida',
-        'tolerancia_salida_despues'  => 'Min. después del fin para salida normal',
-        'minutos_descanso_global'    => 'Min. de descanso a descontar por día',
-        'cerrar_turno_auto'          => '1 = activar cierre automático de turno',
-        'requiere_aprobacion'        => '1 = marcaciones requieren aprobación',
+        'tolerancia_entrada_antes' => [
+          'defecto' => '10',
+          'tipo'    => 'Número (minutos)',
+          'desc'    => 'Minutos antes del inicio del turno en que el sistema acepta una marcación de entrada. Si el turno empieza a las 8:00 y este valor es 10, el empleado puede marcar desde las 7:50. Si llega antes de esa ventana, la marcación se rechaza como "fuera de turno".',
+        ],
+        'tolerancia_entrada_despues' => [
+          'defecto' => '15',
+          'tipo'    => 'Número (minutos)',
+          'desc'    => 'Minutos después del inicio del turno que todavía se consideran "puntual". Si el turno empieza a las 8:00 y este valor es 15, llegar a las 8:14 sigue siendo puntual. Llegar a las 8:16 genera estado "llegada tarde" y queda pendiente de aprobación.',
+        ],
+        'tolerancia_salida_antes' => [
+          'defecto' => '10',
+          'tipo'    => 'Número (minutos)',
+          'desc'    => 'Minutos antes del fin del turno en que se acepta la marcación de salida sin generar alerta. Si el turno termina a las 17:00 y este valor es 10, el empleado puede salir desde las 16:50. Salir antes generará estado "salida temprana".',
+        ],
+        'tolerancia_salida_despues' => [
+          'defecto' => '30',
+          'tipo'    => 'Número (minutos)',
+          'desc'    => 'Minutos después del fin del turno que aún se consideran salida normal. Si el turno termina a las 17:00 y este valor es 30, salir a las 17:29 es normal. Salir después generará estado "salida tarde" (puede indicar horas extra no autorizadas).',
+        ],
+        'minutos_descanso_global' => [
+          'defecto' => '0',
+          'tipo'    => 'Número (minutos)',
+          'desc'    => 'Minutos de descanso (almuerzo/break) a descontar del tiempo trabajado cuando el turno asignado no tiene descanso configurado. Por ejemplo: 60 → descuenta 1 hora al calcular las horas netas del día. Si el turno ya tiene descanso definido, este parámetro no aplica.',
+        ],
+        'cerrar_turno_auto' => [
+          'defecto' => '1',
+          'tipo'    => '1 ó 0',
+          'desc'    => 'Controla si el sistema cierra automáticamente los turnos de días anteriores que quedaron sin marcación de salida. Con valor 1, al iniciar sesión el empleado, el sistema registra una salida automática a la hora de fin de cada turno pendiente. Con valor 0, los turnos incompletos quedan sin cerrar hasta que un supervisor los gestione.',
+        ],
+        'requiere_aprobacion' => [
+          'defecto' => '1',
+          'tipo'    => '1 ó 0',
+          'desc'    => 'Define si las marcaciones fuera de tolerancia (llegadas tarde, salidas tempranas, salidas tarde, fuera de turno) requieren revisión de un supervisor. Con valor 1, esas marcaciones quedan en estado "pendiente" hasta ser aprobadas o rechazadas. Con valor 0, todas las marcaciones se aprueban automáticamente sin revisión. Las marcaciones puntuales siempre se auto-aprueban.',
+        ],
       ];
-      foreach ($claves as $k => $desc): ?>
-      <div class="flex gap-2 p-2 bg-gray-50 rounded-lg">
-        <code class="text-xs text-indigo-700 font-mono flex-shrink-0"><?= $k ?></code>
-        <span class="text-xs text-gray-500">— <?= $desc ?></span>
+      foreach ($claves as $k => $info): ?>
+      <div class="border border-gray-100 rounded-xl p-3 bg-gray-50">
+        <div class="flex flex-wrap items-center gap-3 mb-1">
+          <code class="text-xs text-indigo-700 font-mono font-bold"><?= $k ?></code>
+          <span class="text-xs text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5">
+            Tipo: <?= $info['tipo'] ?>
+          </span>
+          <span class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
+            Default: <?= $info['defecto'] ?>
+          </span>
+        </div>
+        <p class="text-xs text-gray-500 leading-relaxed"><?= $info['desc'] ?></p>
       </div>
       <?php endforeach; ?>
     </div>
